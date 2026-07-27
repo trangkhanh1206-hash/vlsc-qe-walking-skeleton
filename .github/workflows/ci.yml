@@ -1,36 +1,59 @@
-name: Login CI
+name: CI/CD Pipeline
 
 on:
-
   push:
-
     branches:
       - main
 
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
 jobs:
 
-  test:
-
+  ci:
+    name: Continuous Integration
     runs-on: ubuntu-latest
 
     steps:
 
-    - name: Checkout
+      - name: Checkout source code
+        uses: actions/checkout@v4
 
-      uses: actions/checkout@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
 
-    - name: Setup Node
+      - name: Install project dependencies
+        run: npm install
 
-      uses: actions/setup-node@v4
+      - name: Run Unit Tests
+        run: npm test
 
-      with:
+      - name: Upload Website Artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: .
 
-        node-version: 22
+  cd:
+    name: Continuous Delivery
 
-    - name: Install Packages
+    needs: ci
 
-      run: npm install
+    runs-on: ubuntu-latest
 
-    - name: Run Tests
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
 
-      run: npm test
+    steps:
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
